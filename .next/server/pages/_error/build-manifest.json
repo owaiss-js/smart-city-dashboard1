@@ -1,0 +1,24 @@
+{
+  "devFiles": [],
+  "ampDevFiles": [],
+  "polyfillFiles": [],
+  "lowPriorityFiles": [],
+  "rootMainFiles": [],
+  "pages": {
+    "/_error": [
+      "static/chunks/84653_next_dist_compiled_next-devtools_index_523e3901.js",
+      "static/chunks/84653_next_dist_compiled_48b92511._.js",
+      "static/chunks/84653_next_dist_shared_lib_aa8d1902._.js",
+      "static/chunks/84653_next_dist_client_a4d27ba9._.js",
+      "static/chunks/84653_next_dist_05319649._.js",
+      "static/chunks/84653_next_error_9ca9962d.js",
+      "static/chunks/[next]_entry_page-loader_ts_8b29935d._.js",
+      "static/chunks/84653_react-dom_9559ee7d._.js",
+      "static/chunks/84653_d4287a3d._.js",
+      "static/chunks/[root-of-the-server]__cb57a6ad._.js",
+      "static/chunks/GitHub_smart-city-dashboard_pages__error_2da965e7._.js",
+      "static/chunks/turbopack-GitHub_smart-city-dashboard_pages__error_2d08bf2f._.js"
+    ]
+  },
+  "ampFirstPages": []
+}
