@@ -1,7 +1,7 @@
 'use client';
 
 import React from 'react';
-import { Activity, AlertTriangle, CheckCircle, Package } from 'lucide-react';
+import { Activity as ActivityIcon, AlertTriangle, CheckCircle, Package } from 'lucide-react';
 
 interface StatsProps {
   data: any[];
@@ -30,7 +30,7 @@ export const StatsOverview: React.FC<StatsProps> = ({ data }) => {
     {
       title: 'Critical',
       value: data.filter((i) => i.status === 'critical').length,
-      icon: <Activity className="w-6 h-6 text-red-500" />,
+      icon: <ActivityIcon className="w-6 h-6 text-red-500" />,
       color: 'bg-red-50',
     },
   ];
