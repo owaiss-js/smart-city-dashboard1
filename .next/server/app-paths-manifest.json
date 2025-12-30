@@ -1,4 +1,7 @@
 {
-  "/favicon.ico/route": "app/favicon.ico/route.js",
+  "/api/sensor-data/simulate/route": "app/api/sensor-data/simulate/route.js",
+  "/api/infrastructure/route": "app/api/infrastructure/route.js",
+  "/api/sensor-data/route": "app/api/sensor-data/route.js",
+  "/api/complaints/route": "app/api/complaints/route.js",
   "/page": "app/page.js"
 }

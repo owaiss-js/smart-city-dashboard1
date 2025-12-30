@@ -1,10 +1,15 @@
 import type { NextConfig } from "next";
-import path from "node:path";
 
-// Loader path from orchids-visual-edits - use direct resolve to get the actual file
-const loaderPath = require.resolve('orchids-visual-edits/loader.js');
-
-const nextConfig: NextConfig = {
+/** @type {import('next').NextConfig} */
+const nextConfig: NextConfig & { allowedDevOrigins?: string[] } = {
+  // Move allowedDevOrigins to top level for Next.js 15
+  allowedDevOrigins: ["192.168.29.149:3000", "localhost:3000"],
+  experimental: {
+    // Add serverActions.allowedOrigins for Server Actions CSRF protection
+    serverActions: {
+      allowedOrigins: ["192.168.29.149:3000", "localhost:3000"],
+    },
+  },
   images: {
     remotePatterns: [
       {
@@ -17,20 +22,17 @@ const nextConfig: NextConfig = {
       },
     ],
   },
-  outputFileTracingRoot: path.resolve(__dirname, '../../'),
   typescript: {
     ignoreBuildErrors: true,
   },
   eslint: {
     ignoreDuringBuilds: true,
   },
-  turbopack: {
-    rules: {
-      "*.{jsx,tsx}": {
-        loaders: [loaderPath]
-      }
-    }
+  serverExternalPackages: ["mongoose"],
+  webpack: (config) => {
+    config.experiments = { ...config.experiments, topLevelAwait: true };
+    return config;
   }
-} as NextConfig;
+};
 
 export default nextConfig;

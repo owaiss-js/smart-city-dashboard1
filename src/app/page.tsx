@@ -7,10 +7,10 @@ import { InfrastructureCard } from '@/components/InfrastructureCard';
 import { ComplaintsSection } from '@/components/ComplaintsSection';
 import { SensorChart } from '@/components/SensorChart';
 import { Button } from '@/components/ui/button';
-import { Database, RefreshCw, LayoutDashboard, Map as MapIcon, MessageSquare, Activity, ShieldAlert, Thermometer, Droplets } from 'lucide-react';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { Database, RefreshCw, LayoutDashboard, Map as MapIcon, MessageSquare, Activity, ShieldAlert, Thermometer, Droplets, Filter, Wrench, Calendar, X } from 'lucide-react';
 import { toast } from 'sonner';
 
-// Dynamically import MapDisplay because Leaflet doesn't support SSR (Server-Side Rendering)
 const MapDisplay = dynamic(() => import('@/components/MapDisplay').then(mod => mod.MapDisplay), { 
   ssr: false,
   loading: () => <div className="h-full w-full bg-slate-100 animate-pulse rounded-xl flex items-center justify-center">Loading Map...</div>
@@ -22,14 +22,22 @@ export default function SmartCityDashboard() {
   const [sensorHistory, setSensorHistory] = useState([]);
   const [loading, setLoading] = useState(true);
   const [simulating, setSimulating] = useState(false);
+  
+  const [filterType, setFilterType] = useState('all');
+  const [filterStatus, setFilterStatus] = useState('all');
+  
+  const [showMaintenanceModal, setShowMaintenanceModal] = useState(false);
+  const [selectedInfra, setSelectedInfra] = useState<any>(null);
+  const [maintenanceDate, setMaintenanceDate] = useState('');
+  const [maintenanceNotes, setMaintenanceNotes] = useState('');
+  const [scheduledMaintenance, setScheduledMaintenance] = useState<any[]>([]);
 
-  // Fetch all dashboard data from our API
   const fetchData = async () => {
     try {
       const [infraRes, compRes, sensorRes] = await Promise.all([
         fetch('/api/infrastructure'),
         fetch('/api/complaints'),
-        fetch('/api/sensor-data?limit=20') // Get recent history for charts
+        fetch('/api/sensor-data?limit=20')
       ]);
       
       const infraData = await infraRes.json();
@@ -47,15 +55,12 @@ export default function SmartCityDashboard() {
     }
   };
 
-  // Initial load and periodic refresh
   useEffect(() => {
     fetchData();
-    // Auto-refresh data every 10 seconds to simulate real-time monitoring
     const interval = setInterval(fetchData, 10000);
     return () => clearInterval(interval);
   }, []);
 
-  // Helper function to seed initial data if the database is empty
   const handleSeed = async () => {
     setLoading(true);
     try {
@@ -71,7 +76,6 @@ export default function SmartCityDashboard() {
     }
   };
 
-  // Trigger the IoT simulation backend
   const handleSimulate = async () => {
     setSimulating(true);
     try {
@@ -87,8 +91,46 @@ export default function SmartCityDashboard() {
     }
   };
 
-  // Filter infrastructure by health for the "Predictive Alerts" section
+  const filteredInfrastructure = infrastructure.filter((item: any) => {
+    const typeMatch = filterType === 'all' || item.type === filterType;
+    const statusMatch = filterStatus === 'all' || item.status === filterStatus;
+    return typeMatch && statusMatch;
+  });
+
   const criticalItems = infrastructure.filter((item: any) => item.status !== 'healthy');
+
+  const openMaintenanceModal = (item: any) => {
+    setSelectedInfra(item);
+    setMaintenanceDate('');
+    setMaintenanceNotes('');
+    setShowMaintenanceModal(true);
+  };
+
+  const handleScheduleMaintenance = () => {
+    if (!maintenanceDate) {
+      toast.error('Please select a date');
+      return;
+    }
+    
+    const newMaintenance = {
+      id: Date.now(),
+      infraId: selectedInfra._id,
+      infraName: selectedInfra.name,
+      infraType: selectedInfra.type,
+      scheduledDate: maintenanceDate,
+      notes: maintenanceNotes,
+      status: 'scheduled'
+    };
+    
+    setScheduledMaintenance([...scheduledMaintenance, newMaintenance]);
+    setShowMaintenanceModal(false);
+    toast.success(`Maintenance scheduled for ${selectedInfra.name}`);
+  };
+
+  const cancelMaintenance = (id: number) => {
+    setScheduledMaintenance(scheduledMaintenance.filter(m => m.id !== id));
+    toast.info('Maintenance cancelled');
+  };
 
   return (
     <div className="min-h-screen bg-slate-50 p-6 md:p-10">
@@ -97,7 +139,7 @@ export default function SmartCityDashboard() {
         <div>
           <h1 className="text-3xl font-bold text-slate-900 tracking-tight flex items-center gap-2">
             <LayoutDashboard className="w-8 h-8 text-blue-600" />
-            Polar City Smart Monitor
+            Smart Monitor
           </h1>
           <p className="text-slate-500 mt-1">Next-Gen Municipal Infrastructure Control Center</p>
         </div>
@@ -114,25 +156,49 @@ export default function SmartCityDashboard() {
       </div>
 
       <div className="max-w-7xl mx-auto">
-        {/* Real-time KPI Statistics */}
         <StatsOverview data={infrastructure} />
 
         <div className="grid grid-cols-1 xl:grid-cols-3 gap-8">
           
-          {/* Main Content Area: Health List and Analytics */}
           <div className="xl:col-span-2 space-y-8">
             <section>
-              <div className="flex items-center justify-between mb-4">
+              <div className="flex flex-col sm:flex-row sm:items-center justify-between mb-4 gap-4">
                 <h2 className="text-xl font-bold text-slate-800 flex items-center gap-2">
                   <Activity className="w-5 h-5 text-blue-500" />
                   Systems Operational Status
                 </h2>
-                <div className="flex items-center gap-2">
+                <div className="flex items-center gap-2 flex-wrap">
+                  <div className="flex items-center gap-2">
+                    <Filter className="w-4 h-4 text-slate-400" />
+                    <Select value={filterType} onValueChange={setFilterType}>
+                      <SelectTrigger className="w-[130px] h-8 text-xs">
+                        <SelectValue placeholder="Type" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="all">All Types</SelectItem>
+                        <SelectItem value="streetlight">Streetlight</SelectItem>
+                        <SelectItem value="traffic_signal">Traffic Signal</SelectItem>
+                        <SelectItem value="water_pipe">Water Pipe</SelectItem>
+                        <SelectItem value="waste_bin">Waste Bin</SelectItem>
+                      </SelectContent>
+                    </Select>
+                    <Select value={filterStatus} onValueChange={setFilterStatus}>
+                      <SelectTrigger className="w-[120px] h-8 text-xs">
+                        <SelectValue placeholder="Status" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="all">All Status</SelectItem>
+                        <SelectItem value="healthy">Healthy</SelectItem>
+                        <SelectItem value="warning">Warning</SelectItem>
+                        <SelectItem value="critical">Critical</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </div>
                   <span className="relative flex h-2 w-2">
                     <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-green-400 opacity-75"></span>
                     <span className="relative inline-flex rounded-full h-2 w-2 bg-green-500"></span>
                   </span>
-                  <span className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">Live Network</span>
+                  <span className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">Live</span>
                 </div>
               </div>
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
@@ -140,15 +206,27 @@ export default function SmartCityDashboard() {
                   Array(4).fill(0).map((_, i) => (
                     <div key={i} className="h-40 bg-white border border-slate-100 animate-pulse rounded-xl" />
                   ))
+                ) : filteredInfrastructure.length === 0 ? (
+                  <div className="col-span-2 text-center py-8 text-slate-400">
+                    No infrastructure matches your filters.
+                  </div>
                 ) : (
-                  infrastructure.map((item: any) => (
-                    <InfrastructureCard key={item._id} item={item} />
+                  filteredInfrastructure.map((item: any) => (
+                    <div key={item._id} className="relative group">
+                      <InfrastructureCard item={item} />
+                      <button 
+                        onClick={() => openMaintenanceModal(item)}
+                        className="absolute top-2 right-2 opacity-0 group-hover:opacity-100 transition-opacity bg-blue-500 text-white p-1.5 rounded-lg shadow-lg hover:bg-blue-600"
+                        title="Schedule Maintenance"
+                      >
+                        <Wrench className="w-3 h-3" />
+                      </button>
+                    </div>
                   ))
                 )}
               </div>
             </section>
 
-            {/* Time-Series Charts for Sensor Data */}
             <section>
               <h2 className="text-xl font-bold text-slate-800 mb-4 flex items-center gap-2">
                 <Activity className="w-5 h-5 text-blue-500" />
@@ -167,7 +245,6 @@ export default function SmartCityDashboard() {
             </section>
           </div>
 
-          {/* Sidebar: Geographic Map and AI Predictive Alerts */}
           <div className="space-y-8">
             <section>
               <h2 className="text-xl font-bold text-slate-800 mb-4 flex items-center gap-2">
@@ -175,7 +252,7 @@ export default function SmartCityDashboard() {
                 Spatial Analysis
               </h2>
               <div className="h-[400px] rounded-xl relative shadow-sm overflow-hidden">
-                <MapDisplay items={infrastructure} />
+                <MapDisplay items={filteredInfrastructure} />
               </div>
             </section>
 
@@ -196,6 +273,12 @@ export default function SmartCityDashboard() {
                       <p className={`text-[10px] mt-1 ${item.status === 'critical' ? 'text-red-600' : 'text-yellow-600'}`}>
                         {item.status === 'critical' ? 'Critical failure detected. Emergency maintenance dispatched.' : 'Efficiency dropping below 70%. Maintenance recommended.'}
                       </p>
+                      <button 
+                        onClick={() => openMaintenanceModal(item)}
+                        className="mt-2 text-[10px] bg-white border px-2 py-1 rounded hover:bg-slate-50"
+                      >
+                        Schedule Fix
+                      </button>
                     </div>
                   ))
                 ) : (
@@ -203,21 +286,49 @@ export default function SmartCityDashboard() {
                     <p className="text-xs text-slate-400 italic">No anomalies detected by AI models.</p>
                   </div>
                 )}
-                
-                {/* Simulated "Next Service" indicator */}
-                <div className="mt-4 pt-4 border-t border-slate-50">
-                  <p className="text-[10px] font-bold text-slate-400 uppercase tracking-tight mb-2">Upcoming Maintenance</p>
-                  <div className="flex items-center justify-between text-[11px] text-slate-600">
-                    <span>Street Light #101</span>
-                    <span className="font-mono">Jan 05, 2026</span>
+              </div>
+            </section>
+
+            {/* Maintenance Scheduling Panel */}
+            <section className="bg-white p-6 rounded-xl shadow-sm border border-slate-100">
+              <h3 className="font-bold text-slate-800 flex items-center gap-2 mb-4">
+                <Calendar className="w-4 h-4 text-blue-500" />
+                Scheduled Maintenance
+              </h3>
+              <div className="space-y-3">
+                {scheduledMaintenance.length === 0 ? (
+                  <div className="text-center py-4 border-2 border-dashed border-slate-100 rounded-lg">
+                    <p className="text-xs text-slate-400">No maintenance scheduled.</p>
+                    <p className="text-[10px] text-slate-300 mt-1">Hover over a system card and click the wrench icon.</p>
                   </div>
-                </div>
+                ) : (
+                  scheduledMaintenance.map((m) => (
+                    <div key={m.id} className="p-3 bg-blue-50 border border-blue-100 rounded-lg">
+                      <div className="flex justify-between items-start">
+                        <div>
+                          <p className="text-xs font-bold text-blue-800">{m.infraName}</p>
+                          <p className="text-[10px] text-blue-600 uppercase">{m.infraType.replace('_', ' ')}</p>
+                          <p className="text-[10px] text-blue-500 mt-1">
+                            <Calendar className="w-3 h-3 inline mr-1" />
+                            {new Date(m.scheduledDate).toLocaleDateString()}
+                          </p>
+                          {m.notes && <p className="text-[10px] text-slate-500 mt-1 italic">{m.notes}</p>}
+                        </div>
+                        <button 
+                          onClick={() => cancelMaintenance(m.id)}
+                          className="text-red-400 hover:text-red-600"
+                        >
+                          <X className="w-4 h-4" />
+                        </button>
+                      </div>
+                    </div>
+                  ))
+                )}
               </div>
             </section>
           </div>
         </div>
 
-        {/* Community Engagement Section */}
         <section className="mt-12 pt-12 border-t border-slate-200">
           <div className="mb-6">
             <h2 className="text-2xl font-bold text-slate-900 flex items-center gap-2">
@@ -238,9 +349,60 @@ export default function SmartCityDashboard() {
         </div>
         <div className="text-center md:text-right">
           <p>&copy; 2025 Polar City Municipal - Smart Systems Division</p>
-          <p className="text-[10px] mt-1 uppercase tracking-widest font-bold text-blue-400">Class 12 Hackathon Submission</p>
         </div>
       </footer>
+
+      {/* Maintenance Modal */}
+      {showMaintenanceModal && (
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
+          <div className="bg-white rounded-xl p-6 w-full max-w-md shadow-2xl">
+            <div className="flex justify-between items-center mb-4">
+              <h3 className="font-bold text-lg text-slate-800">Schedule Maintenance</h3>
+              <button onClick={() => setShowMaintenanceModal(false)} className="text-slate-400 hover:text-slate-600">
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+            
+            {selectedInfra && (
+              <div className="mb-4 p-3 bg-slate-50 rounded-lg">
+                <p className="font-bold text-slate-700">{selectedInfra.name}</p>
+                <p className="text-xs text-slate-500 uppercase">{selectedInfra.type.replace('_', ' ')}</p>
+                <p className="text-xs text-slate-400 mt-1">{selectedInfra.location?.address}</p>
+              </div>
+            )}
+            
+            <div className="space-y-4">
+              <div>
+                <label className="text-sm font-medium text-slate-700 block mb-1">Select Date</label>
+                <input 
+                  type="date" 
+                  value={maintenanceDate}
+                  onChange={(e) => setMaintenanceDate(e.target.value)}
+                  min={new Date().toISOString().split('T')[0]}
+                  className="w-full border rounded-lg px-3 py-2 text-sm"
+                />
+              </div>
+              <div>
+                <label className="text-sm font-medium text-slate-700 block mb-1">Notes (Optional)</label>
+                <textarea 
+                  value={maintenanceNotes}
+                  onChange={(e) => setMaintenanceNotes(e.target.value)}
+                  placeholder="E.g., Replace bulb, check wiring..."
+                  className="w-full border rounded-lg px-3 py-2 text-sm h-20 resize-none"
+                />
+              </div>
+              <div className="flex gap-2">
+                <Button variant="outline" onClick={() => setShowMaintenanceModal(false)} className="flex-1">
+                  Cancel
+                </Button>
+                <Button onClick={handleScheduleMaintenance} className="flex-1 bg-blue-600 hover:bg-blue-700">
+                  Schedule
+                </Button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

@@ -2,6 +2,8 @@ import { NextResponse } from 'next/server';
 import connectDB from '@/lib/mongodb';
 import Complaint from '@/models/Complaint';
 
+export const dynamic = 'force-dynamic';
+
 export async function GET() {
   try {
     await connectDB();
@@ -31,6 +33,7 @@ export async function POST(req: Request) {
     const newItem = await Complaint.create(body);
     return NextResponse.json(newItem, { status: 201 });
   } catch (error: any) {
+    console.error('Complaint POST Error:', error);
     return NextResponse.json({ error: error.message }, { status: 500 });
   }
 }

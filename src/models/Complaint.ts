@@ -1,11 +1,17 @@
 import mongoose from 'mongoose';
 
-const SensorDataSchema = new mongoose.Schema({
-  infrastructureId: { type: mongoose.Schema.Types.ObjectId, ref: 'Infrastructure', required: true },
-  value: { type: Number, required: true },
-  unit: String,
-  timestamp: { type: Date, default: Date.now },
-  metricType: { type: String, required: true }, // e.g., 'brightness', 'pressure', 'fill_level'
+const ComplaintSchema = new mongoose.Schema({
+  title: { type: String, required: true },
+  description: { type: String, required: true },
+  type: { type: String, required: true },
+  citizenName: { type: String, required: true },
+  status: { type: String, enum: ['pending', 'in_progress', 'resolved'], default: 'pending' },
+  photoUrl: { type: String, default: '' },
+  location: {
+    lat: Number,
+    lng: Number,
+    address: String,
+  },
 }, { timestamps: true });
 
-export default mongoose.models.SensorData || mongoose.model('SensorData', SensorDataSchema);
+export default mongoose.models.Complaint || mongoose.model('Complaint', ComplaintSchema);
